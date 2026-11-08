@@ -162,7 +162,9 @@ jobs:
 
       - name: Execute tests
         run: |
-            docker run -w /opt/openapx/apps/arch --rm ${OPENAPX_IMAGE_TAG_BUILDREF} --entrypoint /bin/bash -c "pytest -v"
+            # -- unit tests tests
+            #    note: working directory is root of the app, akin to running pytest from the root of the repository
+            docker run --workdir /opt/openapx/apps/arch --entrypoint /bin/bash --rm ${OPENAPX_IMAGE_TAG_BUILDREF} -c "pytest -v"
 
 
 
