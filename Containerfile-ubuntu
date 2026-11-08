@@ -1,0 +1,56 @@
+FROM docker.io/openapx/openapx-cx-base-py:latest-ubuntu
+
+
+
+# -- build ARGs
+
+# - default image name
+ARG ARG_OPENAPX_IMAGE_NAME=openapx-apx-arch
+
+# - image ID
+ARG ARG_OPENAPX_IMAGE_ID=${ARG_OPENAPX_IMAGE_NAME}:0.0.0-local
+
+# - GitHub repository URL for the source code
+ARG ARG_OPENAPX_GITHUB_REPO_URL=
+
+# - GitHub commit URL
+ARG ARG_OPENAPX_GITHUB_COMMIT_URL=
+
+# - GitHub build URL
+ARG ARG_OPENAPX_GITHUB_BUILD_URL=
+
+
+# -- OCI labels
+LABEL org.opencontainers.image.title="${ARG_OPENAPX_IMAGE_NAME}" \
+      org.opencontainers.image.description="Base openapx devcontainer image for Python Web apps and APIs" \
+      org.opencontainers.image.version="${ARG_OPENAPX_IMAGE_ID}" \
+      org.opencontainers.image.source="${ARG_OPENAPX_GITHUB_REPO_URL}" \
+      org.opencontainers.image.revision="${ARG_OPENAPX_GITHUB_COMMIT_URL}" \
+      org.opencontainers.image.url="${ARG_OPENAPX_GITHUB_BUILD_URL}" \
+      org.opencontainers.image.licenses="Apache-2.0" \
+      org.opencontainers.image.vendor="openapx open-source project" \
+      org.opencontainers.image.created="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+
+
+# -- stage app and API artifacts
+COPY --chmod=444 pytest.ini /opt/openapx/apps/arch/
+
+COPY --chmod=444 --parents apx/ /opt/openapx/apps/arch/
+COPY --chmod=444 --parents app/ /opt/openapx/apps/arch/
+# COPY --chmod=444 --parents includes/ /opt/openapx/apps/arch/
+
+
+# -- update container-release
+RUN /opt/openapx/bin/container-release.sh
+
+
+# -- exposed ports
+#    note: only expecting HTTPS communication (port 443)
+# EXPOSE 443
+
+
+# -- set up entry point for container
+#    note: the entry point script runs when the container starts and 
+#          launches the app, API and associated services
+# COPY chmod=555 entrypoint.sh /entrypoint.sh
+# ENTRYPOINT ["/entrypoint.sh"]

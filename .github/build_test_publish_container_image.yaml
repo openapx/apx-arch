@@ -1,0 +1,203 @@
+name: Build and Publish Container Image
+
+on:
+  push:
+  
+
+env:
+    # -- constants
+
+    # - branch name 
+    #   note: used by workflow to enable or disable/skip steps 
+    OPENAPX_BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
+
+    # - registry URL
+    OPENAPX_REGISTRY: docker.io
+
+    # - repository name
+    OPENAPX_REGISTRY_REPO: openapx
+
+    # - image name
+    OPENAPX_IMAGE_NAME: openapx-apx-arch
+
+
+jobs:
+  build-and-push:
+    name: Build and Push Container Image
+
+
+    strategy:
+      matrix:
+        # os: [ubuntu, rockylinux, debian]
+        os: [ubuntu]
+
+    runs-on: ubuntu-latest
+
+    permissions:
+        contents: read
+        id-token: write
+
+    
+    # -- action steps
+    #    note: some steps always run regardless of branch, some only run on specific branches
+
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+
+      - name: Identify current branch
+        run: |
+          echo "----------------------------------------"  
+          echo "Branch name is ${{ env.OPENAPX_BRANCH_NAME }}"
+          echo "----------------------------------------"  
+
+
+      - name: Identify development container ID context
+        run: |
+          echo "-- set default container ID context to development"
+          echo "OPENAPX_CONTAINER_IDCONTEXT=-development" >> $GITHUB_ENV
+
+
+      - name: Identify production container ID context
+        if: ${{ env.OPENAPX_BRANCH_NAME == 'main' }}
+        run: |
+            echo "-- set production context on Container ID"
+            echo "OPENAPX_CONTAINER_IDCONTEXT=" >> $GITHUB_ENV
+
+
+      - name: Set up environment
+        env:
+            # - fully qualified image base name
+            #   note: used to reference the complete image name including registry and repository
+            OPENAPX_IMAGE_FQ_BASENAME: ${{ env.OPENAPX_REGISTRY }}/${{ env.OPENAPX_REGISTRY_REPO }}/${{ env.OPENAPX_IMAGE_NAME }}
+
+            # - unique container identifier
+            #   note: combines image base name, version, and workflow run ID to provide some form of uniqueness
+            OPENAPX_CONTAINER_ID: ${{ env.OPENAPX_IMAGE_NAME }}:${{ vars.VERSION_MAJOR }}.${{ vars.VERSION_MINOR }}.${{ github.run_number }}-${{ matrix.os }}-${{ github.run_id }}${{ env.OPENAPX_CONTAINER_IDCONTEXT}}
+
+            # - image version references
+            #   note: use of github.run_number for patch version
+            #   note: github.run_number first value is 1 so patch version 0 never exists
+            #   note: github.run_number resets to 1 when the workflow is renamed or deleted and recreated, i.e. interpreted as a new workflow
+            OPENAPX_IMAGE_VERSION_MAJOR_MINOR: ${{ vars.VERSION_MAJOR }}.${{ vars.VERSION_MINOR }}
+            OPENAPX_IMAGE_VERSION_MAJOR_MINOR_PATCH: ${{ vars.VERSION_MAJOR }}.${{ vars.VERSION_MINOR }}.${{ github.run_number }}
+
+
+            # - GitHub reference information
+            #   note: github.sha provides the full commit SHA associated with the current workflow run
+            #   note: github.run_id provides the unique identifier for the current workflow run
+            OPENAPX_GITHUB_COMMIT_SHA: ${{ github.sha }}
+            OPENAPX_GITHUB_RUNID: ${{ github.run_id }}
+            OPENAPX_GITHUB_REPO_URL: ${{ github.server_url }}/${{ github.repository }}
+            OPENAPX_GITHUB_COMMIT_URL: ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}
+            OPENAPX_GITHUB_BUILD_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+        run: |
+            # -- set up GITHUB_ENV
+
+            # -- standard env entries
+            echo "OPENAPX_IMAGE_FQ_BASENAME=${{ env.OPENAPX_IMAGE_FQ_BASENAME }}" >> $GITHUB_ENV
+
+            echo "OPENAPX_CONTAINER_ID=${{ env.OPENAPX_CONTAINER_ID }}" >> $GITHUB_ENV
+
+            echo "OPENAPX_IMAGE_VERSION_MAJOR_MINOR=${{ env.OPENAPX_IMAGE_VERSION_MAJOR_MINOR }}" >> $GITHUB_ENV
+            echo "OPENAPX_IMAGE_VERSION_MAJOR_MINOR_PATCH=${{ env.OPENAPX_IMAGE_VERSION_MAJOR_MINOR_PATCH }}" >> $GITHUB_ENV
+
+            echo "OPENAPX_GITHUB_COMMIT_SHA=${{ env.OPENAPX_GITHUB_COMMIT_SHA }}" >> $GITHUB_ENV
+
+            echo "OPENAPX_GITHUB_RUNID=${{ env.OPENAPX_GITHUB_RUNID }}" >> $GITHUB_ENV
+            echo "OPENAPX_GITHUB_REPO_URL=${{ env.OPENAPX_GITHUB_REPO_URL }}" >> $GITHUB_ENV
+            echo "OPENAPX_GITHUB_COMMIT_URL=${{ env.OPENAPX_GITHUB_COMMIT_URL }}" >> $GITHUB_ENV
+
+
+            # -- derived env entries
+            echo "OPENAPX_GITHUB_COMMIT_SHORT_SHA=$(echo ${{ env.OPENAPX_GITHUB_COMMIT_SHA }} | cut -c1-7)" >> $GITHUB_ENV
+
+            # -- tags
+
+            # - generic build tag
+            #   note: this tag should never be visible in public registries
+            echo "OPENAPX_IMAGE_TAG_BUILDREF=${{ env.OPENAPX_IMAGE_FQ_BASENAME }}:build-${{ matrix.os }}-${{ env.OPENAPX_GITHUB_RUNID}}" >> $GITHUB_ENV
+
+            # - persistent tags
+            #   note: not all of below tags will be used for builds off of development branch
+            #   note: builds from development branch will have -development tag suffix
+            echo "OPENAPX_IMAGE_TAG_LATEST=${{ env.OPENAPX_IMAGE_FQ_BASENAME }}:latest-${{ matrix.os }}" >> $GITHUB_ENV
+            echo "OPENAPX_IMAGE_TAG_MAJOR_MINOR=${{ env.OPENAPX_IMAGE_FQ_BASENAME }}:${{ env.OPENAPX_IMAGE_VERSION_MAJOR_MINOR }}-${{ matrix.os }}" >> $GITHUB_ENV
+            echo "OPENAPX_IMAGE_TAG_MAJOR_MINOR_PATCH=${{ env.OPENAPX_IMAGE_FQ_BASENAME }}:${{ env.OPENAPX_IMAGE_VERSION_MAJOR_MINOR_PATCH }}-${{ matrix.os }}" >> $GITHUB_ENV
+            echo "OPENAPX_IMAGE_TAG_MAJOR_MINOR_PATCH_COMMIT=${{ env.OPENAPX_IMAGE_FQ_BASENAME }}:${{ env.OPENAPX_IMAGE_VERSION_MAJOR_MINOR_PATCH }}-${{ matrix.os }}-$(echo ${{ env.OPENAPX_GITHUB_COMMIT_SHA }} | cut -c1-7)" >> $GITHUB_ENV
+            echo "OPENAPX_IMAGE_TAG_MAJOR_MINOR_PATCH_BUILD=${{ env.OPENAPX_IMAGE_FQ_BASENAME }}:${{ env.OPENAPX_IMAGE_VERSION_MAJOR_MINOR_PATCH }}-${{ matrix.os }}-${{ env.OPENAPX_GITHUB_RUNID}}" >> $GITHUB_ENV  
+
+            # - image build ARGS
+            echo "OPENAPX_ARGS_IMAGE_NAME=${{ env.OPENAPX_IMAGE_NAME }}" >> $GITHUB_ENV
+
+            echo "OPENAPX_ARGS_IMAGE_ID=${{ env.OPENAPX_CONTAINER_ID }}" >> $GITHUB_ENV
+            echo "OPENAPX_ARGS_GITHUB_REPO_URL=${{ env.OPENAPX_GITHUB_REPO_URL }}" >> $GITHUB_ENV
+            echo "OPENAPX_ARGS_GITHUB_COMMIT_URL=${{ env.OPENAPX_GITHUB_COMMIT_URL }}" >> $GITHUB_ENV
+            echo "OPENAPX_ARGS_GITHUB_BUILD_URL=${{ env.OPENAPX_GITHUB_BUILD_URL }}" >> $GITHUB_ENV
+
+            # -- end of GITHUB_ENV setup
+
+
+      - name: Display GITHUB_ENV
+        run: |
+            echo "-------------------------------------------------------"
+            cat $GITHUB_ENV
+            echo "-------------------------------------------------------"
+
+
+      - name: Build image
+        run: |
+            docker build --no-cache --tag ${OPENAPX_IMAGE_TAG_BUILDREF} \
+                --build-arg ARG_OPENAPX_IMAGE_NAME=${OPENAPX_ARGS_IMAGE_NAME} \
+                --build-arg ARG_OPENAPX_IMAGE_ID=${OPENAPX_ARGS_IMAGE_ID} \
+                --build-arg ARG_OPENAPX_GITHUB_REPO_URL=${OPENAPX_ARGS_GITHUB_REPO_URL} \
+                --build-arg ARG_OPENAPX_GITHUB_COMMIT_URL=${OPENAPX_ARGS_GITHUB_COMMIT_URL} \
+                --build-arg ARG_OPENAPX_GITHUB_BUILD_URL=${OPENAPX_ARGS_GITHUB_BUILD_URL} \
+                --file Containerfile-${{ matrix.os }} \
+                .
+
+
+      - name: Execute tests
+        run: |
+            docker run -w /opt/openapx/apps/arch --rm ${OPENAPX_IMAGE_TAG_BUILDREF} --entrypoint /bin/bash -c "pytest -v"
+
+
+
+      - name: Connect to Docker Hub
+        if: ${{ env.OPENAPX_BRANCH_NAME == 'development' || env.OPENAPX_BRANCH_NAME == 'main' }}
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+
+
+      - name: Tag development image
+        if: ${{ env.OPENAPX_BRANCH_NAME == 'development' }}
+        run: |
+            docker tag ${OPENAPX_IMAGE_TAG_BUILDREF} ${OPENAPX_IMAGE_TAG_LATEST}-development
+            docker tag ${OPENAPX_IMAGE_TAG_BUILDREF} ${OPENAPX_IMAGE_TAG_MAJOR_MINOR}-development
+            docker tag ${OPENAPX_IMAGE_TAG_BUILDREF} ${OPENAPX_IMAGE_TAG_MAJOR_MINOR_PATCH_COMMIT}-development
+
+            docker rmi ${OPENAPX_IMAGE_TAG_BUILDREF}
+
+
+      - name: Tag production image
+        if: ${{ env.OPENAPX_BRANCH_NAME == 'main' }}
+        run: |
+            docker tag ${OPENAPX_IMAGE_TAG_BUILDREF} ${OPENAPX_IMAGE_TAG_LATEST}
+            docker tag ${OPENAPX_IMAGE_TAG_BUILDREF} ${OPENAPX_IMAGE_TAG_MAJOR_MINOR}
+            docker tag ${OPENAPX_IMAGE_TAG_BUILDREF} ${OPENAPX_IMAGE_TAG_MAJOR_MINOR_PATCH}
+            docker tag ${OPENAPX_IMAGE_TAG_BUILDREF} ${OPENAPX_IMAGE_TAG_MAJOR_MINOR_PATCH_COMMIT}
+            docker tag ${OPENAPX_IMAGE_TAG_BUILDREF} ${OPENAPX_IMAGE_TAG_MAJOR_MINOR_PATCH_BUILD}
+
+            docker rmi ${OPENAPX_IMAGE_TAG_BUILDREF}
+
+
+      - name: Push image
+        if: ${{ env.OPENAPX_BRANCH_NAME == 'development' || env.OPENAPX_BRANCH_NAME == 'main' }}
+        run: |
+            docker image push --all-tags ${OPENAPX_IMAGE_FQ_BASENAME}
