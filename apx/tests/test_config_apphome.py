@@ -5,15 +5,18 @@ Unit test for apx.config.apphome function
 import pytest
 import pytest_asyncio
 
+
 import os
 import tempfile
+
 
 import apx.config
 import apx.exceptions
 
 
 
-@pytest.fixture
+
+@pytest_asyncio.fixture
 async def testRoot():
     """Temporary directory for test purposes"""
     with tempfile.TemporaryDirectory() as temp_dir:
