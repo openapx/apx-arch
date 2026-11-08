@@ -2,7 +2,7 @@
 Standard exceptions 
 """
 
-class InvalidConfigurationException(Exception):
+class ConfigurationException(Exception):
     """Exception raised for missing or invalid configuration."""
 
     def __init__(self, message="Invalid configuration"):
