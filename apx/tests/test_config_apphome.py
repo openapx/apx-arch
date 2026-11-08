@@ -3,6 +3,7 @@ Unit test for apx.config.apphome function
 """
 
 import pytest
+import pytest_asyncio
 
 import os
 import tempfile
@@ -33,7 +34,7 @@ async def test_apphome_env_not_set():
 
 
     # -- test
-    with pytest.raises(apx.exceptions.InvalidConfigurationException) as ex_details:
+    with pytest.raises(apx.exceptions.ConfigurationException) as ex_details:
         await apx.config.apphome()
 
 
@@ -61,7 +62,7 @@ async def test_apphome_env_multiple_vars():
 
 
     # -- test
-    with pytest.raises(apx.exceptions.InvalidConfigurationException) as ex_details:
+    with pytest.raises(apx.exceptions.ConfigurationException) as ex_details:
         await apx.config.apphome()
 
 
@@ -95,7 +96,7 @@ async def test_apphome_dir_not_exist(testRoot):
     os.environ["APP_HOME"] = test_path
 
     # -- test
-    with pytest.raises(apx.exceptions.InvalidConfigurationException) as ex_details:
+    with pytest.raises(apx.exceptions.ConfigurationException) as ex_details:
         await apx.config.apphome()
 
     # -- assertions
@@ -127,7 +128,7 @@ async def test_apphome_dir_isfile(testRoot):
     os.environ["APP_HOME"] = test_path
 
     # -- test
-    with pytest.raises(apx.exceptions.InvalidConfigurationException) as ex_details:
+    with pytest.raises(apx.exceptions.ConfigurationException) as ex_details:
         await apx.config.apphome()
 
     # -- assertions
