@@ -38,7 +38,7 @@ async def test_apphome_env_not_set():
 
     # -- test
     with pytest.raises(apx.exceptions.ConfigurationException) as ex_details:
-        await apx.config.apphome()
+        apx.config.apphome()
 
 
     # -- assertions
@@ -66,7 +66,7 @@ async def test_apphome_env_multiple_vars():
 
     # -- test
     with pytest.raises(apx.exceptions.ConfigurationException) as ex_details:
-        await apx.config.apphome()
+        apx.config.apphome()
 
 
     # -- assertions
@@ -100,7 +100,7 @@ async def test_apphome_dir_not_exist(testRoot):
 
     # -- test
     with pytest.raises(apx.exceptions.ConfigurationException) as ex_details:
-        await apx.config.apphome()
+        apx.config.apphome()
 
     # -- assertions
     assert "App home directory does not exist" in str(ex_details.value)
@@ -132,7 +132,7 @@ async def test_apphome_dir_isfile(testRoot):
 
     # -- test
     with pytest.raises(apx.exceptions.ConfigurationException) as ex_details:
-        await apx.config.apphome()
+        apx.config.apphome()
 
     # -- assertions
     assert "App home directory does not exist or is not a directory" in str(ex_details.value)
@@ -160,7 +160,7 @@ async def test_apphome_dir(testRoot, envvarname):
     os.environ[envvarname] = testRoot
 
     # -- test
-    result = await apx.config.apphome()
+    result = apx.config.apphome()
 
     # -- assertions
     assert result == testRoot
