@@ -35,9 +35,9 @@ LABEL org.opencontainers.image.title="${ARG_OPENAPX_IMAGE_NAME}" \
 # -- stage app and API artifacts
 COPY --chmod=444 pytest.ini /opt/openapx/apps/arch/
 
-COPY --chmod=444 --parents apx/ /opt/openapx/apps/arch/
-COPY --chmod=444 --parents app/ /opt/openapx/apps/arch/
-# COPY --chmod=444 --parents includes/ /opt/openapx/apps/arch/
+COPY --chmod=755  apx/ /opt/openapx/apps/arch/apx/
+COPY --chmod=755  app/ /opt/openapx/apps/arch/app/
+# COPY --chmod=755  includes/ /opt/openapx/apps/arch/includes/
 
 
 # -- update container-release
